@@ -6,25 +6,40 @@ from .songs import *
 
 def parse_playlist_header(response: Dict) -> Dict[str, Any]:
     playlist: Dict[str, Any] = {}
-    own_playlist = "musicEditablePlaylistDetailHeaderRenderer" in response["header"]
+    # print(f"{TAB_CONTENT + SECTION_LIST_ITEM=}")
+    header = nav(response, TAB_CONTENT + SECTION_LIST_ITEM)
+    # print(f"{header.keys()=}")
+    own_playlist = "musicEditablePlaylistDetailHeaderRenderer" in header
     if not own_playlist:
-        header = response["header"]["musicDetailHeaderRenderer"]
+        # print(f"{header['musicResponsiveHeaderRenderer'].keys()=}")
+        # header = response["header"]["musicDetailHeaderRenderer"]
         playlist["privacy"] = "PUBLIC"
-    else:
-        header = response["header"]["musicEditablePlaylistDetailHeaderRenderer"]
-        playlist["privacy"] = header["editHeader"]["musicPlaylistEditHeaderRenderer"]["privacy"]
-        header = header["header"]["musicDetailHeaderRenderer"]
-    playlist["owned"] = own_playlist
+        header = header["musicResponsiveHeaderRenderer"]
+        # print(f"{header.keys()=}")
 
+    else:
+        # print(f"{header['musicEditablePlaylistDetailHeaderRenderer']['header']['musicResponsiveHeaderRenderer'].keys()=}")
+        # print(f"{header['musicEditablePlaylistDetailHeaderRenderer']['editHeader']['musicPlaylistEditHeaderRenderer']['privacy']}")
+        header = header["musicEditablePlaylistDetailHeaderRenderer"]
+        playlist["privacy"] = header['editHeader']['musicPlaylistEditHeaderRenderer']['privacy']
+        header = header["header"]["musicResponsiveHeaderRenderer"]
+        # print(f"{header.keys()=}")
+    playlist["owned"] = own_playlist
+    # print(f"{header['thumbnail'].keys()=}")
+
+    # breakpoint()
     playlist["title"] = nav(header, TITLE_TEXT)
-    playlist["thumbnails"] = nav(header, THUMBNAIL_CROPPED)
-    playlist["description"] = nav(header, DESCRIPTION, True)
+    playlist["thumbnails"] = nav(header, THUMBNAILS)
+    playlist["description"] = nav(header, ['description'] + DESCRIPTION_SHELF + DESCRIPTION,  True)
     run_count = len(nav(header, SUBTITLE_RUNS))
     if run_count > 1:
+        STRAPLINE = ['straplineTextOne', 'runs',0]
         playlist["author"] = {
-            "name": nav(header, SUBTITLE2),
-            "id": nav(header, [*SUBTITLE_RUNS, 2, *NAVIGATION_BROWSE_ID], True),
+
+            "name": nav(header, STRAPLINE + ['text'],),
+            "id": nav(header, STRAPLINE + NAVIGATION_BROWSE_ID, True),
         }
+        print(f"{playlist['author']=}")
         if run_count == 5:
             playlist["year"] = nav(header, SUBTITLE3)
 

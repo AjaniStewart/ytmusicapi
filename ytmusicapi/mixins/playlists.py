@@ -106,11 +106,23 @@ class PlaylistsMixin(MixinProtocol):
         body = {"browseId": browseId}
         endpoint = "browse"
         response = self._send_request(endpoint, body)
-        results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + ["musicPlaylistShelfRenderer"])
-        playlist = {"id": results["playlistId"]}
-        playlist.update(parse_playlist_header(response))
+        # nav_string = ['contents','twoColumnBrowseResultsRenderer','secondaryContents','sectionListRenderer','contents',0,'musicPlaylistShelfRenderer']
+        # nav_string = ['contents','twoColumnBrowseResultsRenderer']
+        # ['contents']['twoColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0] the "header info" of the playlist
+        # results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + ["musicPlaylistShelfRenderer"])
+        results = nav(response, TWO_COLUMN_RENDERER)
+        # print(f"results: {results}")
+        playlistId = nav(
+            results, ["secondaryContents"] + SECTION_LIST_ITEM + ["musicPlaylistShelfRenderer", "playlistId"]
+        )
+        playlist = {"id": playlistId}
+        # print(f"playlistId: {playlistId}")
+        playlist.update(parse_playlist_header(results))
         if playlist["trackCount"] is None:
             playlist["trackCount"] = len(results["contents"])
+
+        print(f"playlist: {playlist}")
+        breakpoint()
 
         request_func = lambda additionalParams: self._send_request(endpoint, body, additionalParams)
 
