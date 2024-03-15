@@ -21,7 +21,7 @@ def parse_playlist_header(response: Dict) -> Dict[str, Any]:
         # print(f"{header['musicEditablePlaylistDetailHeaderRenderer']['header']['musicResponsiveHeaderRenderer'].keys()=}")
         # print(f"{header['musicEditablePlaylistDetailHeaderRenderer']['editHeader']['musicPlaylistEditHeaderRenderer']['privacy']}")
         header = header["musicEditablePlaylistDetailHeaderRenderer"]
-        playlist["privacy"] = header['editHeader']['musicPlaylistEditHeaderRenderer']['privacy']
+        playlist["privacy"] = header["editHeader"]["musicPlaylistEditHeaderRenderer"]["privacy"]
         header = header["header"]["musicResponsiveHeaderRenderer"]
         # print(f"{header.keys()=}")
     playlist["owned"] = own_playlist
@@ -30,16 +30,17 @@ def parse_playlist_header(response: Dict) -> Dict[str, Any]:
     # breakpoint()
     playlist["title"] = nav(header, TITLE_TEXT)
     playlist["thumbnails"] = nav(header, THUMBNAILS)
-    playlist["description"] = nav(header, ['description'] + DESCRIPTION_SHELF + DESCRIPTION,  True)
+    playlist["description"] = nav(header, ["description", *DESCRIPTION_SHELF, *DESCRIPTION], True)
     run_count = len(nav(header, SUBTITLE_RUNS))
     if run_count > 1:
-        STRAPLINE = ['straplineTextOne', 'runs',0]
+        STRAPLINE = ["straplineTextOne", "runs", 0]
         playlist["author"] = {
-
-            "name": nav(header, STRAPLINE + ['text'],),
+            "name": nav(
+                header,
+                [*STRAPLINE, "text"],
+            ),
             "id": nav(header, STRAPLINE + NAVIGATION_BROWSE_ID, True),
         }
-        print(f"{playlist['author']=}")
         if run_count == 5:
             playlist["year"] = nav(header, SUBTITLE3)
 

@@ -106,33 +106,24 @@ class PlaylistsMixin(MixinProtocol):
         body = {"browseId": browseId}
         endpoint = "browse"
         response = self._send_request(endpoint, body)
-        # nav_string = ['contents','twoColumnBrowseResultsRenderer','secondaryContents','sectionListRenderer','contents',0,'musicPlaylistShelfRenderer']
-        # nav_string = ['contents','twoColumnBrowseResultsRenderer']
-        # ['contents']['twoColumnBrowseResultsRenderer']['tabs'][0]['tabRenderer']['content']['sectionListRenderer']['contents'][0] the "header info" of the playlist
-        # results = nav(response, SINGLE_COLUMN_TAB + SECTION_LIST_ITEM + ["musicPlaylistShelfRenderer"])
-        results = nav(response, TWO_COLUMN_RENDERER)
-        # print(f"results: {results}")
+        response = nav(response, TWO_COLUMN_RENDERER)
         playlistId = nav(
-            results, ["secondaryContents"] + SECTION_LIST_ITEM + ["musicPlaylistShelfRenderer", "playlistId"]
+            response, ["secondaryContents", *SECTION_LIST_ITEM, "musicPlaylistShelfRenderer", "playlistId"]
         )
-        playlist = {"id": playlistId}
-        # print(f"playlistId: {playlistId}")
-        playlist.update(parse_playlist_header(results))
+        playlist: dict[str, Any] = {"id": playlistId}
+        playlist.update(parse_playlist_header(response))
         if playlist["trackCount"] is None:
-            playlist["trackCount"] = len(results["contents"])
-
-        print(f"playlist: {playlist}")
-        breakpoint()
+            playlist["trackCount"] = len(response["contents"])
 
         request_func = lambda additionalParams: self._send_request(endpoint, body, additionalParams)
 
         # suggestions and related are missing e.g. on liked songs
-        section_list = nav(response, [*SINGLE_COLUMN_TAB, "sectionListRenderer"])
+        section_list = nav(response, ["secondaryContents", *SECTION_LIST_ITEM, "musicPlaylistShelfRenderer"])
         playlist["related"] = []
         if "continuations" in section_list:
             additionalParams = get_continuation_params(section_list)
-            own_playlist = "musicEditablePlaylistDetailHeaderRenderer" in response["header"]
-            if own_playlist and (suggestions_limit > 0 or related):
+            own_playlist = playlist["owned"]
+            if own_playlist and (suggestions_limit > 0 or related):  # this not might work
                 parse_func = lambda results: parse_playlist_items(results)
                 suggested = request_func(additionalParams)
                 continuation = nav(suggested, SECTION_LIST_CONTINUATION)
@@ -162,14 +153,13 @@ class PlaylistsMixin(MixinProtocol):
                     )
 
         playlist["tracks"] = []
-        if "contents" in results:
-            playlist["tracks"] = parse_playlist_items(results["contents"])
-
+        if "contents" in section_list:
+            playlist["tracks"] = parse_playlist_items(section_list["contents"])
             parse_func = lambda contents: parse_playlist_items(contents)
-            if "continuations" in results:
+            if "continuations" in section_list:
                 playlist["tracks"].extend(
                     get_continuations(
-                        results, "musicPlaylistShelfContinuation", limit, request_func, parse_func
+                        section_list, "musicPlaylistShelfContinuation", limit, request_func, parse_func
                     )
                 )
 
